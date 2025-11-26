@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Feed - WikiFood</title>
+<link rel="stylesheet" href="wikireserva.css"> 
+
+<style>
+  /* Estilos Específicos do Feed */
+  body {
+    display: block; /* Sobrescreve o flex center do login */
+    padding: 0;
+  }
+
+  /* Cabeçalho */
+  header {
+    background: var(--primary-color);
+    color: white;
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  header h1 {
+    font-size: 1.5rem;
+    margin: 0;
+  }
+
+  #btn-new {
+    background: white;
+    color: var(--primary-color);
+    border: none;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: bold;
+    cursor: pointer;
+    text-decoration: none;
+    font-size: 0.9rem;
+  }
+
+  #btn-new:hover {
+    background: #f0f0f0;
+  }
+
+  /* Grid de Receitas */
+  .feed-container {
+    max-width: 1200px;
+    margin: 30px auto;
+    padding: 0 20px;
+    display: grid;
+    /* Cria colunas responsivas automaticamente */
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); 
+    gap: 25px;
+  }
+
+  /* Card da Receita */
+  .recipe-card {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    transition: transform 0.2s, box-shadow 0.2s;
+    border: 1px solid var(--gray-light);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .recipe-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 15px rgba(0,0,0,0.1);
+  }
+
+  .card-img {
+    width: 100%;
+    height: 200px;
+    object-fit: cover; /* Faz a imagem preencher sem esticar */
+    background-color: #eee;
+  }
+
+  .card-body {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+  }
+
+  .card-title {
+    color: var(--primary-color);
+    font-size: 1.25rem;
+    margin-bottom: 10px;
+    font-weight: 700;
+  }
+
+  .card-info {
+    font-size: 0.9rem;
+    color: #666;
+    margin-bottom: 15px;
+    line-height: 1.5;
+    
+    /* Limita o texto a 3 linhas */
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .card-footer {
+    margin-top: auto;
+    padding-top: 15px;
+    border-top: 1px solid #eee;
+    font-size: 0.8rem;
+    color: #999;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  /* Estado Vazio */
+  .empty-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 50px;
+    color: #888;
+  }
+</style>
+</head>
+<body>
+
+  <header>
+    <h1>WikiFood 🍔</h1>
+    <a href="wikireserva.html" id="btn-new">+ Nova Receita</a>
+  </header>
+
+  <div id="feed-container" class="feed-container">
+    </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const container = document.getElementById('feed-container');
+      
+      // 1. Pega os dados do LocalStorage
+      const storedData = localStorage.getItem('wiki_recipes');
+      const recipes = storedData ? JSON.parse(storedData) : [];
+
+      // 2. Verifica se tem receitas
+      if (recipes.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <h2>Nenhuma receita encontrada 😢</h2>
+            <p>Clique em "+ Nova Receita" para cadastrar a primeira!</p>
+          </div>
+        `;
+        return;
+      }
+
+      // 3. Renderiza cada receita
+      // Vamos inverter a ordem para mostrar as mais novas primeiro (.reverse)
+      recipes.reverse().forEach(recipe => {
+        // Se a imagem falhar ou não existir, usa um placeholder colorido
+        const imgUrl = recipe.imageUrl || 'https://placehold.co/600x400/orange/white?text=Sem+Foto';
+        
+        // Formata a data bonitinha
+        const date = new Date(recipe.createdAt).toLocaleDateString('pt-BR');
+
+        const cardHTML = `
+          <div class="recipe-card">
+            <img src="${imgUrl}" alt="${recipe.title}" class="card-img" onerror="this.src='https://placehold.co/600x400?text=Erro+Imagem'">
+            <div class="card-body">
+              <h3 class="card-title">${recipe.title}</h3>
+              <p class="card-info"><strong>História:</strong> ${recipe.lore}</p>
+              <p class="card-info" style="font-style: italic;">${recipe.description}</p>
+              
+              <div class="card-footer">
+                <span>Criado em: ${date}</span>
+              </div>
+            </div>
+          </div>
+        `;
+        
+        // Adiciona o HTML ao container
+        container.innerHTML += cardHTML;
+      });
+    });
+  </script>
+
+</body>
+</html>
