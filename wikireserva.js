@@ -151,7 +151,7 @@ function registerEventListeners() {
 
   // 4. Botão PULAR / IR PARA HOME (AQUI ESTÁ A MUDANÇA)
   document.getElementById('btn-skip')?.addEventListener('click', () => {
-      window.location.href = 'feed.html'; 
+      window.location.href = 'index.html'; 
   });
 
   // 5. Links e Logout
@@ -167,4 +167,5 @@ function registerEventListeners() {
 document.addEventListener('DOMContentLoaded', () => {
     registerEventListeners();
     if(localStorage.getItem('authToken')) showRecipeSection();
+
 });
