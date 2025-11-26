@@ -1,13 +1,5 @@
 console.log('[INIT] Iniciando utils.js');
 
-// 1️⃣ GARANTIR TOKEN EXISTE
-if (!localStorage.getItem('authToken')) {
-  console.log('[INIT] Criando token...');
-  localStorage.setItem('authToken', 'fake-token-123');
-} else {
-  console.log('[INIT] Token existe:', localStorage.getItem('authToken'));
-}
-
 // 2️⃣ GARANTIR EMPRESAS DE EXEMPLO EXISTEM
 if (!localStorage.getItem('empresas')) {
   console.log('[INIT] Criando empresas de exemplo...');
@@ -55,31 +47,21 @@ async function makeRequest(endpoint, data = {}, token = null, method = "GET") {
   console.log(`[REQUEST] ${method} ${endpoint}`);
 
   try {
-    // 🔴 VERIFICAR TOKEN
     const tokenAtual = localStorage.getItem('authToken');
     
-    if (!tokenAtual) {
-      console.error('[ERROR] Token não existe em localStorage');
-      localStorage.setItem('authToken', 'fake-token-123');
+    // NOVA VALIDAÇÃO UNIFICADA (exige login real)
+    if (!tokenAtual || !token || token !== tokenAtual) {
+      console.error('[AUTH] Token ausente ou inválido');
       return {
         ok: false,
         status: 401,
-        payload: { message: "Token não encontrado. Reinicie a página." }
-      };
-    }
-
-    if (token !== tokenAtual) {
-      console.error('[ERROR] Token não corresponde. Esperado:', tokenAtual, 'Recebido:', token);
-      return {
-        ok: false,
-        status: 401,
-        payload: { message: "Token inválido: " + token }
+        payload: { message: "Você precisa estar logado para realizar esta ação." }
       };
     }
 
     console.log('[TOKEN] ✅ Token válido!');
 
-    // 3️⃣ PROCESSAR REQUISIÇÃO
+    // PROCESSAR REQUISIÇÃO
     if (method === 'GET') {
       return handleGetRequest(endpoint);
     } else if (method === 'POST') {
@@ -100,25 +82,19 @@ async function makeRequest(endpoint, data = {}, token = null, method = "GET") {
     console.error("[ERROR]", error);
     return {
       ok: false,
-      status: 0,
+      status: 500,
       payload: { message: error.message }
     };
   }
 }
 
-/**
- * GET - Recuperar dados
- */
+// === GET, POST, PUT, DELETE (mantidos iguais) ===
 function handleGetRequest(endpoint) {
   console.log('[GET]', endpoint);
 
   if (endpoint === 'Company') {
     const empresas = JSON.parse(localStorage.getItem('empresas')) || [];
-    return {
-      ok: true,
-      status: 200,
-      payload: empresas
-    };
+    return { ok: true, status: 200, payload: empresas };
   }
 
   if (endpoint.startsWith('Company/')) {
@@ -127,30 +103,15 @@ function handleGetRequest(endpoint) {
     const empresa = empresas.find(e => e.id === id);
 
     if (empresa) {
-      return {
-        ok: true,
-        status: 200,
-        payload: empresa
-      };
+      return { ok: true, status: 200, payload: empresa };
     }
 
-    return {
-      ok: false,
-      status: 404,
-      payload: { message: "Empresa não encontrada" }
-    };
+    return { ok: false, status: 404, payload: { message: "Empresa não encontrada" } };
   }
 
-  return {
-    ok: false,
-    status: 404,
-    payload: { message: "Endpoint não encontrado" }
-  };
+  return { ok: false, status: 404, payload: { message: "Endpoint não encontrado" } };
 }
 
-/**
- * POST - Criar novo dado
- */
 function handlePostRequest(endpoint, data) {
   console.log('[POST]', endpoint, data);
 
@@ -175,23 +136,12 @@ function handlePostRequest(endpoint, data) {
 
     console.log('[POST] ✅ Empresa criada:', novaEmpresa.id);
 
-    return {
-      ok: true,
-      status: 201,
-      payload: novaEmpresa
-    };
+    return { ok: true, status: 201, payload: novaEmpresa };
   }
 
-  return {
-    ok: false,
-    status: 400,
-    payload: { message: "Não foi possível criar" }
-  };
+  return { ok: false, status: 400, payload: { message: "Não foi possível criar" } };
 }
 
-/**
- * PUT - Atualizar dado
- */
 function handlePutRequest(endpoint, data) {
   console.log('[PUT]', endpoint, data);
 
@@ -216,29 +166,14 @@ function handlePutRequest(endpoint, data) {
       };
 
       localStorage.setItem('empresas', JSON.stringify(empresas));
-      console.log('[PUT] ✅ Empresa atualizada');
-
-      return {
-        ok: true,
-        status: 200,
-        payload: empresas[index]
-      };
+      return { ok: true, status: 200, payload: empresas[index] };
     }
   }
 
-  return {
-    ok: false,
-    status: 404,
-    payload: { message: "Empresa não encontrada" }
-  };
+  return { ok: false, status: 404, payload: { message: "Empresa não encontrada" } };
 }
 
-/**
- * DELETE - Deletar dado
- */
 function handleDeleteRequest(endpoint) {
-  console.log('[DELETE]', endpoint);
-
   const parts = endpoint.split('/');
   if (parts[0] === 'Company' && parts[1]) {
     const id = parts[1];
@@ -246,30 +181,15 @@ function handleDeleteRequest(endpoint) {
     const index = empresas.findIndex(e => e.id === id);
 
     if (index !== -1) {
-      const deletada = empresas[index];
       empresas.splice(index, 1);
       localStorage.setItem('empresas', JSON.stringify(empresas));
-
-      console.log('[DELETE] ✅ Empresa deletada');
-
-      return {
-        ok: true,
-        status: 200,
-        payload: { message: "Deletada com sucesso", data: deletada }
-      };
+      return { ok: true, status: 200, payload: { message: "Deletada com sucesso" } };
     }
   }
 
-  return {
-    ok: false,
-    status: 404,
-    payload: { message: "Não encontrada" }
-  };
+  return { ok: false, status: 404, payload: { message: "Não encontrada" } };
 }
 
-/**
- * Função debug
- */
 function verificarLocalStorage() {
   console.log('=== DIAGNÓSTICO ===');
   console.log('Token:', localStorage.getItem('authToken'));
@@ -278,6 +198,5 @@ function verificarLocalStorage() {
   console.log('===================');
 }
 
-// Executar ao carregar
 console.log('[INIT] ✅ utils.js carregado com sucesso!');
 verificarLocalStorage();

@@ -19,12 +19,17 @@ function mostrarMensagem(mensagem, tipo) {
 async function salvarEmpresa() {
   try {
     const token = localStorage.getItem('authToken');
+    
+    // EXIGE LOGIN REAL (token do wikireserva)
     if (!token) {
-      mostrarMensagem("Você precisa estar logado!", "danger");
+      mostrarMensagem("Você precisa estar logado para cadastrar uma empresa!", "danger");
+      setTimeout(() => {
+        window.location.href = 'wikireserva.html';
+      }, 2000);
       return;
     }
 
-    // Coletar dados gerais da empresa
+    // Coletar dados
     const nameInput = document.getElementById('nomeEmpresa').value.trim();
     const typeInput = document.getElementById('tipoEmpresa').value.trim();
     const cnpjInput = document.getElementById('cnpj').value.trim();
@@ -34,13 +39,12 @@ async function salvarEmpresa() {
     const telefoneInput = document.getElementById('telefone').value.trim();
     const emailInput = document.getElementById('email').value.trim();
 
-    // Validar campos obrigatórios básicos
+    // Validação básica
     if (!nameInput || !typeInput || !cnpjInput || !cepInput || !numeroInput || !enderecoInput) {
       mostrarMensagem("Preencha todos os campos obrigatórios!", "danger");
       return;
     }
 
-    // Montar objeto da empresa
     const novaEmpresa = {
       Name: nameInput,
       Type: typeInput,
@@ -52,7 +56,6 @@ async function salvarEmpresa() {
       Email: emailInput
     };
 
-    // Fazer requisição POST para cadastrar a empresa
     const response = await makeRequest("Company", novaEmpresa, token, "POST");
 
     if (response.ok && response.payload && response.payload.id) {
@@ -63,21 +66,15 @@ async function salvarEmpresa() {
       }, 1500);
     } else {
       let erro = "Erro ao cadastrar empresa";
-      
       if (response.payload?.message) {
         erro = response.payload.message;
       } else if (response.payload?.errors) {
         erro = JSON.stringify(response.payload.errors);
       }
-
       mostrarMensagem(erro, "danger");
     }
   } catch (error) {
     console.error("Erro:", error);
     mostrarMensagem("Erro inesperado: " + error.message, "danger");
   }
-}
-
-function voltarParaListagem() {
-  window.location.href = 'empresas-listagem.html';
 }
