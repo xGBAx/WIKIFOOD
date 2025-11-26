@@ -3,12 +3,15 @@ async function makeRequest(endpoint, data = {}, token = null, method = "GET") {
   await new Promise(resolve => setTimeout(resolve, 300));
 
   try {
-    // Verificar token
-    if (token !== 'fake-token-123') {
+    console.log(`[makeRequest] Endpoint: ${endpoint}, Method: ${method}, Token: ${token}`);
+
+    // Verificar token - IMPORTANTE!
+    if (!token || token !== 'fake-token-123') {
+      console.error('[makeRequest] Token inválido ou não fornecido');
       return { 
         ok: false, 
         status: 401, 
-        payload: { message: "Token inválido" } 
+        payload: { message: "Token inválido. Faça login novamente." } 
       };
     }
 
@@ -34,7 +37,7 @@ async function makeRequest(endpoint, data = {}, token = null, method = "GET") {
     return { 
       ok: false, 
       status: 0, 
-      payload: error.message 
+      payload: { message: error.message } 
     };
   }
 }
@@ -43,8 +46,11 @@ async function makeRequest(endpoint, data = {}, token = null, method = "GET") {
  * Processa requisições GET
  */
 function handleGetRequest(endpoint) {
+  console.log(`[GET] ${endpoint}`);
+  
   if (endpoint === 'Company') {
     const empresas = JSON.parse(localStorage.getItem('empresas')) || [];
+    console.log(`[GET] Retornando ${empresas.length} empresas`);
     return { 
       ok: true, 
       status: 200, 
@@ -56,12 +62,14 @@ function handleGetRequest(endpoint) {
     const empresa = empresas.find(e => e.id === id);
 
     if (empresa) {
+      console.log(`[GET] Empresa encontrada: ${empresa.name}`);
       return { 
         ok: true, 
         status: 200, 
         payload: empresa 
       };
     } else {
+      console.error(`[GET] Empresa não encontrada: ${id}`);
       return { 
         ok: false, 
         status: 404, 
@@ -81,6 +89,8 @@ function handleGetRequest(endpoint) {
  * Processa requisições POST (criar novos dados)
  */
 function handlePostRequest(storageKey, data) {
+  console.log(`[POST] ${storageKey}`, data);
+  
   if (storageKey === 'Company') {
     const empresas = JSON.parse(localStorage.getItem('empresas')) || [];
     
@@ -103,6 +113,8 @@ function handlePostRequest(storageKey, data) {
     empresas.push(novaEmpresa);
     localStorage.setItem('empresas', JSON.stringify(empresas));
 
+    console.log(`[POST] Empresa criada com sucesso: ${novaEmpresa.name}`);
+
     return { 
       ok: true, 
       status: 201, 
@@ -122,6 +134,7 @@ function handlePostRequest(storageKey, data) {
  */
 function handlePutRequest(endpoint, data) {
   const parts = endpoint.split('/');
+  console.log(`[PUT] ${endpoint}`, data);
   
   if (parts[0] === 'Company' && parts[1]) {
     const id = parts[1];
@@ -143,6 +156,7 @@ function handlePutRequest(endpoint, data) {
       };
 
       localStorage.setItem('empresas', JSON.stringify(empresas));
+      console.log(`[PUT] Empresa atualizada: ${empresas[index].name}`);
 
       return { 
         ok: true, 
@@ -151,6 +165,7 @@ function handlePutRequest(endpoint, data) {
       };
     }
 
+    console.error(`[PUT] Empresa não encontrada: ${id}`);
     return { 
       ok: false, 
       status: 404, 
@@ -170,6 +185,7 @@ function handlePutRequest(endpoint, data) {
  */
 function handleDeleteRequest(endpoint) {
   const parts = endpoint.split('/');
+  console.log(`[DELETE] ${endpoint}`);
   
   if (parts[0] === 'Company' && parts[1]) {
     const id = parts[1];
@@ -181,6 +197,8 @@ function handleDeleteRequest(endpoint) {
       empresas.splice(index, 1);
       localStorage.setItem('empresas', JSON.stringify(empresas));
 
+      console.log(`[DELETE] Empresa deletada: ${empresaDeletada.name}`);
+
       return { 
         ok: true, 
         status: 200, 
@@ -188,6 +206,7 @@ function handleDeleteRequest(endpoint) {
       };
     }
 
+    console.error(`[DELETE] Empresa não encontrada: ${id}`);
     return { 
       ok: false, 
       status: 404, 
@@ -204,46 +223,82 @@ function handleDeleteRequest(endpoint) {
 
 /**
  * Inicializa dados de exemplo no localStorage
+ * IMPORTANTE: Só executa se não houver dados ainda
  */
 function inicializarDados() {
-  if (!localStorage.getItem('empresas')) {
-    const empresasExemplo = [
-      {
-        id: 'emp_001',
-        name: 'Pizzaria Italiana',
-        type: 'Pizzaria',
-        cnpj: '12.345.678/0001-90',
-        cep: '01310100',
-        addressNumber: '100',
-        addressComplement: 'Rua Augusta',
-        phone: '(11) 3012-3456',
-        email: 'contato@pizzariaitaliana.com',
-        createdAt: new Date().toISOString()
-      },
-      {
-        id: 'emp_002',
-        name: 'Sushi Bar Premium',
-        type: 'Sushi Bar',
-        cnpj: '98.765.432/0001-10',
-        cep: '04543130',
-        addressNumber: '500',
-        addressComplement: 'Avenida Paulista',
-        phone: '(11) 3045-6789',
-        email: 'contato@sushibarpremium.com',
-        createdAt: new Date().toISOString()
-      }
-    ];
+  try {
+    // 1. SEMPRE criar o token (é obrigatório!)
+    if (!localStorage.getItem('authToken')) {
+      console.log('[Init] Criando token de autenticação...');
+      localStorage.setItem('authToken', 'fake-token-123');
+    }
 
-    localStorage.setItem('empresas', JSON.stringify(empresasExemplo));
-  }
+    // 2. Criar dados de exemplo se não existirem
+    if (!localStorage.getItem('empresas')) {
+      console.log('[Init] Inicializando empresas de exemplo...');
+      
+      const empresasExemplo = [
+        {
+          id: 'emp_001',
+          name: 'Pizzaria Italiana',
+          type: 'Pizzaria',
+          cnpj: '12.345.678/0001-90',
+          cep: '01310100',
+          addressNumber: '100',
+          addressComplement: 'Rua Augusta',
+          phone: '(11) 3012-3456',
+          email: 'contato@pizzariaitaliana.com',
+          createdAt: new Date().toISOString()
+        },
+        {
+          id: 'emp_002',
+          name: 'Sushi Bar Premium',
+          type: 'Sushi Bar',
+          cnpj: '98.765.432/0001-10',
+          cep: '04543130',
+          addressNumber: '500',
+          addressComplement: 'Avenida Paulista',
+          phone: '(11) 3045-6789',
+          email: 'contato@sushibarpremium.com',
+          createdAt: new Date().toISOString()
+        }
+      ];
 
-  // Garantir token de autenticação
-  if (!localStorage.getItem('authToken')) {
-    localStorage.setItem('authToken', 'fake-token-123');
+      localStorage.setItem('empresas', JSON.stringify(empresasExemplo));
+      console.log('[Init] Empresas de exemplo criadas');
+    } else {
+      const empresas = JSON.parse(localStorage.getItem('empresas'));
+      console.log(`[Init] Encontradas ${empresas.length} empresas no localStorage`);
+    }
+
+  } catch (error) {
+    console.error('[Init] Erro ao inicializar dados:', error);
   }
+}
+
+/**
+ * Debug: Verificar estado do localStorage
+ */
+function verificarLocalStorage() {
+  console.log('=== DIAGNÓSTICO localStorage ===');
+  console.log('Token:', localStorage.getItem('authToken'));
+  console.log('Empresas:', JSON.parse(localStorage.getItem('empresas') || '[]').length);
+  console.log('================================');
 }
 
 // Inicializar dados ao carregar o script
 if (typeof window !== 'undefined') {
-  window.addEventListener('load', inicializarDados);
+  // Executar quando o DOM estiver carregado
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('[Init] Inicializando utils.js...');
+      inicializarDados();
+      verificarLocalStorage();
+    });
+  } else {
+    // Se o DOM já foi carregado
+    console.log('[Init] Inicializando utils.js...');
+    inicializarDados();
+    verificarLocalStorage();
+  }
 }
