@@ -1,20 +1,95 @@
+console.log('[INIT] Executando utils.js');
+
+// Garantir que o token SEMPRE existe
+if (!localStorage.getItem('authToken')) {
+  console.log('[INIT] Token não encontrado, criando...');
+  localStorage.setItem('authToken', 'fake-token-123');
+} else {
+  console.log('[INIT] Token já existe:', localStorage.getItem('authToken'));
+}
+
+// Garantir que as empresas de exemplo existem
+if (!localStorage.getItem('empresas')) {
+  console.log('[INIT] Criando empresas de exemplo...');
+  const empresasExemplo = [
+    {
+      id: 'emp_001',
+      name: 'Pizzaria Italiana',
+      type: 'Pizzaria',
+      cnpj: '12.345.678/0001-90',
+      cep: '01310100',
+      addressNumber: '100',
+      addressComplement: 'Rua Augusta',
+      phone: '(11) 3012-3456',
+      email: 'contato@pizzariaitaliana.com',
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: 'emp_002',
+      name: 'Sushi Bar Premium',
+      type: 'Sushi Bar',
+      cnpj: '98.765.432/0001-10',
+      cep: '04543130',
+      addressNumber: '500',
+      addressComplement: 'Avenida Paulista',
+      phone: '(11) 3045-6789',
+      email: 'contato@sushibarpremium.com',
+      createdAt: new Date().toISOString()
+    }
+  ];
+  localStorage.setItem('empresas', JSON.stringify(empresasExemplo));
+  console.log('[INIT] Empresas de exemplo criadas');
+} else {
+  const qtd = JSON.parse(localStorage.getItem('empresas')).length;
+  console.log('[INIT] Encontradas', qtd, 'empresas');
+}
+
+/**
+ * Simula requisições HTTP usando localStorage
+ * @param {string} endpoint - Endpoint da API (ex: 'Company')
+ * @param {object} data - Dados para enviar
+ * @param {string} token - Token de autenticação
+ * @param {string} method - Método HTTP (GET, POST, PUT, DELETE)
+ * @returns {object} Resposta simulada
+ */
 async function makeRequest(endpoint, data = {}, token = null, method = "GET") {
   // Simular delay de requisição
   await new Promise(resolve => setTimeout(resolve, 300));
 
-  try {
-    console.log(`[makeRequest] Endpoint: ${endpoint}, Method: ${method}, Token: ${token}`);
+  console.log(`[REQUEST] ${method} ${endpoint} | Token: ${token}`);
 
-    // Verificar token - IMPORTANTE!
-    if (!token || token !== 'fake-token-123') {
-      console.error('[makeRequest] Token inválido ou não fornecido');
+  try {
+    // 🔴 VERIFICAR TOKEN - CRITICAMENTE IMPORTANTE!
+    const tokenAtual = localStorage.getItem('authToken');
+    console.log('[TOKEN] Verificando token...');
+    console.log('[TOKEN] Token em localStorage:', tokenAtual);
+    console.log('[TOKEN] Token passado como parâmetro:', token);
+
+    if (!tokenAtual) {
+      console.error('[TOKEN] ❌ Nenhum token em localStorage!');
+      console.log('[TOKEN] Criando novo token...');
+      localStorage.setItem('authToken', 'fake-token-123');
       return { 
         ok: false, 
         status: 401, 
-        payload: { message: "Token inválido. Faça login novamente." } 
+        payload: { message: "Token não encontrado. Reinicialize a página." } 
       };
     }
 
+    if (token !== tokenAtual) {
+      console.warn('[TOKEN] ⚠️ Token não corresponde!');
+      console.log('[TOKEN] Token esperado:', tokenAtual);
+      console.log('[TOKEN] Token recebido:', token);
+      return { 
+        ok: false, 
+        status: 401, 
+        payload: { message: "Token inválido. Use o token correto." } 
+      };
+    }
+
+    console.log('[TOKEN] ✅ Token válido!');
+
+    // Processar requisição
     const storageKey = endpoint.split('/')[0];
 
     if (method === 'GET') {
@@ -32,8 +107,9 @@ async function makeRequest(endpoint, data = {}, token = null, method = "GET") {
       status: 400, 
       payload: { message: "Método não suportado" } 
     };
+
   } catch (error) {
-    console.error("Erro na requisição:", error);
+    console.error("[ERROR] Erro na requisição:", error);
     return { 
       ok: false, 
       status: 0, 
@@ -46,7 +122,7 @@ async function makeRequest(endpoint, data = {}, token = null, method = "GET") {
  * Processa requisições GET
  */
 function handleGetRequest(endpoint) {
-  console.log(`[GET] ${endpoint}`);
+  console.log(`[GET] Processando: ${endpoint}`);
   
   if (endpoint === 'Company') {
     const empresas = JSON.parse(localStorage.getItem('empresas')) || [];
@@ -89,7 +165,7 @@ function handleGetRequest(endpoint) {
  * Processa requisições POST (criar novos dados)
  */
 function handlePostRequest(storageKey, data) {
-  console.log(`[POST] ${storageKey}`, data);
+  console.log(`[POST] Criando novo item em ${storageKey}`, data);
   
   if (storageKey === 'Company') {
     const empresas = JSON.parse(localStorage.getItem('empresas')) || [];
@@ -110,10 +186,13 @@ function handlePostRequest(storageKey, data) {
       createdAt: new Date().toISOString()
     };
 
+    // Adicionar à lista
     empresas.push(novaEmpresa);
     localStorage.setItem('empresas', JSON.stringify(empresas));
 
-    console.log(`[POST] Empresa criada com sucesso: ${novaEmpresa.name}`);
+    console.log(`[POST] ✅ Empresa criada: ${novaEmpresa.name}`);
+    console.log(`[POST] ID: ${novaEmpresa.id}`);
+    console.log(`[POST] Total de empresas: ${empresas.length}`);
 
     return { 
       ok: true, 
@@ -134,7 +213,7 @@ function handlePostRequest(storageKey, data) {
  */
 function handlePutRequest(endpoint, data) {
   const parts = endpoint.split('/');
-  console.log(`[PUT] ${endpoint}`, data);
+  console.log(`[PUT] Atualizando ${endpoint}`, data);
   
   if (parts[0] === 'Company' && parts[1]) {
     const id = parts[1];
@@ -156,7 +235,7 @@ function handlePutRequest(endpoint, data) {
       };
 
       localStorage.setItem('empresas', JSON.stringify(empresas));
-      console.log(`[PUT] Empresa atualizada: ${empresas[index].name}`);
+      console.log(`[PUT] ✅ Empresa atualizada: ${empresas[index].name}`);
 
       return { 
         ok: true, 
@@ -185,7 +264,7 @@ function handlePutRequest(endpoint, data) {
  */
 function handleDeleteRequest(endpoint) {
   const parts = endpoint.split('/');
-  console.log(`[DELETE] ${endpoint}`);
+  console.log(`[DELETE] Deletando ${endpoint}`);
   
   if (parts[0] === 'Company' && parts[1]) {
     const id = parts[1];
@@ -197,7 +276,7 @@ function handleDeleteRequest(endpoint) {
       empresas.splice(index, 1);
       localStorage.setItem('empresas', JSON.stringify(empresas));
 
-      console.log(`[DELETE] Empresa deletada: ${empresaDeletada.name}`);
+      console.log(`[DELETE] ✅ Empresa deletada: ${empresaDeletada.name}`);
 
       return { 
         ok: true, 
@@ -222,83 +301,19 @@ function handleDeleteRequest(endpoint) {
 }
 
 /**
- * Inicializa dados de exemplo no localStorage
- * IMPORTANTE: Só executa se não houver dados ainda
- */
-function inicializarDados() {
-  try {
-    // 1. SEMPRE criar o token (é obrigatório!)
-    if (!localStorage.getItem('authToken')) {
-      console.log('[Init] Criando token de autenticação...');
-      localStorage.setItem('authToken', 'fake-token-123');
-    }
-
-    // 2. Criar dados de exemplo se não existirem
-    if (!localStorage.getItem('empresas')) {
-      console.log('[Init] Inicializando empresas de exemplo...');
-      
-      const empresasExemplo = [
-        {
-          id: 'emp_001',
-          name: 'Pizzaria Italiana',
-          type: 'Pizzaria',
-          cnpj: '12.345.678/0001-90',
-          cep: '01310100',
-          addressNumber: '100',
-          addressComplement: 'Rua Augusta',
-          phone: '(11) 3012-3456',
-          email: 'contato@pizzariaitaliana.com',
-          createdAt: new Date().toISOString()
-        },
-        {
-          id: 'emp_002',
-          name: 'Sushi Bar Premium',
-          type: 'Sushi Bar',
-          cnpj: '98.765.432/0001-10',
-          cep: '04543130',
-          addressNumber: '500',
-          addressComplement: 'Avenida Paulista',
-          phone: '(11) 3045-6789',
-          email: 'contato@sushibarpremium.com',
-          createdAt: new Date().toISOString()
-        }
-      ];
-
-      localStorage.setItem('empresas', JSON.stringify(empresasExemplo));
-      console.log('[Init] Empresas de exemplo criadas');
-    } else {
-      const empresas = JSON.parse(localStorage.getItem('empresas'));
-      console.log(`[Init] Encontradas ${empresas.length} empresas no localStorage`);
-    }
-
-  } catch (error) {
-    console.error('[Init] Erro ao inicializar dados:', error);
-  }
-}
-
-/**
- * Debug: Verificar estado do localStorage
+ * Função para debug - verificar estado do localStorage
  */
 function verificarLocalStorage() {
+  console.log('');
   console.log('=== DIAGNÓSTICO localStorage ===');
   console.log('Token:', localStorage.getItem('authToken'));
-  console.log('Empresas:', JSON.parse(localStorage.getItem('empresas') || '[]').length);
+  const empresas = JSON.parse(localStorage.getItem('empresas') || '[]');
+  console.log('Número de empresas:', empresas.length);
+  console.log('Empresas:', empresas);
   console.log('================================');
+  console.log('');
 }
 
-// Inicializar dados ao carregar o script
-if (typeof window !== 'undefined') {
-  // Executar quando o DOM estiver carregado
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-      console.log('[Init] Inicializando utils.js...');
-      inicializarDados();
-      verificarLocalStorage();
-    });
-  } else {
-    // Se o DOM já foi carregado
-    console.log('[Init] Inicializando utils.js...');
-    inicializarDados();
-    verificarLocalStorage();
-  }
-}
+console.log('[INIT] utils.js carregado com sucesso!');
+console.log('[INIT] Token disponível:', localStorage.getItem('authToken'));
+verificarLocalStorage();
